@@ -108,6 +108,40 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
+// Thêm đoạn code này vào server.js để import users mặc định
+const defaultUsers = [
+  {
+    username: "lily_0770",
+    password: "$2b$10$eNoftzO4wLGxL1NWLHlSOeQE0f9I2ryxvtXjw961izQJqCFxziPsO",
+  },
+  {
+    username: "lka_0770",
+    password: "$2b$10$eNoftzO4wLGxL1NWLHlSOeQE0f9I2ryxvtXjw961izQJqCFxziPsO",
+  },
+];
+
+// Import users mặc định nếu collection trống
+async function importDefaultUsers() {
+  try {
+    const count = await User.countDocuments();
+    if (count === 0) {
+      await User.insertMany(defaultUsers);
+      console.log("Default users imported successfully");
+    }
+  } catch (error) {
+    console.error("Error importing default users:", error);
+  }
+}
+
+// Gọi hàm import sau khi kết nối MongoDB thành công
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("Connected to MongoDB");
+    importDefaultUsers();
+  })
+  .catch((err) => console.error("MongoDB connection error:", err));
+
 // API đăng ký
 app.post("/register", async (req, res) => {
   try {
@@ -183,23 +217,27 @@ app.get("/api/check-users", (req, res) => {
 
 app.post("/api/parking-records", async (req, res) => {
   try {
-    const { parkingId, vehicleType, licensePlate, studentClass, username } =
-      req.body;
+    // Kiểm tra đăng nhập
+    const username = req.headers["x-user"];
+    if (!username) {
+      return res.status(401).json({ message: "Vui lòng đăng nhập để đăng ký" });
+    }
+
+    const { parkingId, vehicleType, licensePlate, studentClass } = req.body;
+
+    // Kiểm tra dữ liệu đầu vào
+    if (!parkingId || !vehicleType || !licensePlate || !studentClass) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng điền đầy đủ thông tin" });
+    }
+
+    // Tính ngày hết hạn (30 ngày)
     const registrationDate = new Date();
     const expiryDate = new Date(registrationDate);
     expiryDate.setDate(registrationDate.getDate() + 30);
 
-    const newRecord = {
-      parkingId,
-      vehicleType,
-      licensePlate,
-      studentClass,
-      username,
-      registrationTime: registrationDate.toISOString(),
-      expiryDate: expiryDate.toISOString(),
-      status: "Active",
-    };
-
+    // Đọc dữ liệu hiện tại
     let records = [];
     try {
       records = JSON.parse(fs.readFileSync(parkingRecordsFile, "utf8"));
@@ -207,29 +245,47 @@ app.post("/api/parking-records", async (req, res) => {
       records = [];
     }
 
-    if (records.some((record) => record.parkingId === parkingId)) {
+    // Kiểm tra chỗ đã có người đăng ký
+    if (
+      records.some(
+        (record) => record.parkingId === parkingId && record.status === "Active"
+      )
+    ) {
       return res.status(400).json({ message: "Chỗ này đã có người đăng ký" });
     }
 
-    if (records.some((record) => record.username === username)) {
+    // Kiểm tra người dùng đã đăng ký chỗ khác (trừ super admin)
+    if (
+      username !== SUPER_ADMIN &&
+      records.some(
+        (record) => record.username === username && record.status === "Active"
+      )
+    ) {
       return res.status(400).json({ message: "Bạn đã đăng ký một chỗ rồi" });
     }
 
+    // Tạo record mới
+    const newRecord = {
+      parkingId,
+      vehicleType,
+      licensePlate,
+      studentClass,
+      username,
+      registrationDate: registrationDate.toISOString(),
+      expiryDate: expiryDate.toISOString(),
+      status: "Active",
+    };
+
+    // Lưu vào file
     records.push(newRecord);
     fs.writeFileSync(parkingRecordsFile, JSON.stringify(records, null, 2));
 
     res.json({
       message: "Đăng ký thành công",
-      record: newRecord,
       expiryDate: expiryDate.toLocaleDateString("vi-VN"),
     });
   } catch (error) {
     console.error("Error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-    });
     res.status(500).json({ message: "Lỗi server" });
   }
 });
