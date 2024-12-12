@@ -5,6 +5,7 @@ const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const nodemailer = require("nodemailer");
 const schedule = require("node-schedule");
+const mongoose = require("mongoose");
 
 const app = express();
 const parkingRecordsFile = "parking-records.json";
@@ -13,6 +14,7 @@ const ADMIN_EMAIL = "lkamod433@gmail.com"; // Thay bằng email của bạn
 const PORT = process.env.PORT || 5000;
 const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily_0770";
 let adminUsers = [];
+let users = [];
 
 // Đảm bảo file admin-users.json tồn tại
 function ensureAdminFile() {
@@ -24,6 +26,33 @@ function ensureAdminFile() {
   } catch (error) {
     console.error("Error loading admin users:", error);
     adminUsers = [];
+  }
+}
+
+// Hàm đảm bảo file users.json tồn tại và load dữ liệu
+function ensureUsersFile() {
+  try {
+    if (!fs.existsSync("users.json")) {
+      fs.writeFileSync("users.json", JSON.stringify([], null, 2));
+      console.log("Created new users.json file");
+    }
+    const data = fs.readFileSync("users.json", "utf8");
+    users = JSON.parse(data);
+    console.log("Loaded users from file:", users.length, "users");
+  } catch (error) {
+    console.error("Error in ensureUsersFile:", error);
+    users = [];
+  }
+}
+
+// Hàm lưu users vào file
+function saveUsers() {
+  try {
+    fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+    console.log("Users saved successfully");
+  } catch (error) {
+    console.error("Error saving users:", error);
+    throw error;
   }
 }
 
@@ -60,86 +89,85 @@ const checkAuth = (req, res, next) => {
   next();
 };
 
-// Đăng ký người dùng
+// Kết nối MongoDB
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Schema cho User
+const userSchema = new mongoose.Schema({
+  username: String,
+  password: String,
+});
+
+const User = mongoose.model("User", userSchema);
+
+// API đăng ký
 app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ message: "Username and password are required." });
-  }
-
   try {
+    const { username, password } = req.body;
+
+    // Kiểm tra user tồn tại
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: "Tên đăng nhập đã tồn tại" });
+    }
+
+    // Mã hóa mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userData = { username, password: hashedPassword };
 
-    // Lưu vào file JSON
-    const filePath = "users.json";
-    let users = [];
+    // Tạo user mới
+    const user = new User({ username, password: hashedPassword });
+    await user.save();
 
-    if (fs.existsSync(filePath)) {
-      const fileData = fs.readFileSync(filePath, "utf-8");
-      users = JSON.parse(fileData);
-    }
-
-    // Kiểm tra nếu username đã tồn tại
-    if (users.find((user) => user.username === username)) {
-      return res.status(400).json({ message: "Username already exists." });
-    }
-
-    users.push(userData);
-    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
-
-    res.json({ message: "User registered successfully!" });
+    res.json({ message: "Đăng ký thành công" });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
+// API đăng nhập
 app.post("/login", async (req, res) => {
-  console.log("Received login request:", req.body);
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    console.log("Missing username or password");
-    return res
-      .status(400)
-      .json({ message: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu" });
-  }
-
   try {
-    const filePath = "users.json";
-    console.log("Checking file:", filePath);
+    const { username, password } = req.body;
 
-    if (!fs.existsSync(filePath)) {
-      console.log("Users file not found");
-      return res.status(400).json({ message: "Tài khoản không tồn tại" });
-    }
-
-    const fileData = fs.readFileSync(filePath, "utf-8");
-    const users = JSON.parse(fileData);
-    console.log("Found users:", users.length);
-
-    const user = users.find((u) => u.username === username);
+    // Tìm user
+    const user = await User.findOne({ username });
     if (!user) {
-      console.log("User not found:", username);
-      return res.status(400).json({ message: "Tài khoản không tồn tại" });
+      return res
+        .status(401)
+        .json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
     }
 
+    // Kiểm tra mật khẩu
     const validPassword = await bcrypt.compare(password, user.password);
-    console.log("Password valid:", validPassword);
-
     if (!validPassword) {
-      return res.status(400).json({ message: "Mật khẩu không chính xác" });
+      return res
+        .status(401)
+        .json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
     }
 
-    res.json({ message: "Đăng nhập thành công!" });
+    res.json({ message: "Đăng nhập thành công" });
   } catch (error) {
-    console.error("Detailed login error:", error);
-    res.status(500).json({ message: error.message || "Lỗi server" });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Lỗi server" });
   }
+});
+
+// Gọi hàm khởi tạo khi server starts
+ensureUsersFile();
+
+// Thêm API để kiểm tra danh sách users (chỉ dùng để debug)
+app.get("/api/check-users", (req, res) => {
+  res.json({
+    userCount: users.length,
+    users: users.map((u) => ({ username: u.username })), // Chỉ trả về username để bảo mật
+  });
 });
 
 app.post("/api/parking-records", async (req, res) => {
@@ -147,11 +175,8 @@ app.post("/api/parking-records", async (req, res) => {
     const { parkingId, vehicleType, licensePlate, studentClass, username } =
       req.body;
     const registrationDate = new Date();
-    const lastDayOfMonth = new Date(
-      registrationDate.getFullYear(),
-      registrationDate.getMonth() + 1,
-      0
-    );
+    const expiryDate = new Date(registrationDate);
+    expiryDate.setDate(registrationDate.getDate() + 30);
 
     const newRecord = {
       parkingId,
@@ -160,8 +185,8 @@ app.post("/api/parking-records", async (req, res) => {
       studentClass,
       username,
       registrationTime: registrationDate.toISOString(),
-      expiryDate: lastDayOfMonth.toISOString(),
-      status: "active",
+      expiryDate: expiryDate.toISOString(),
+      status: "Active",
     };
 
     let records = [];
@@ -185,7 +210,7 @@ app.post("/api/parking-records", async (req, res) => {
     res.json({
       message: "Đăng ký thành công",
       record: newRecord,
-      expiryDate: lastDayOfMonth.toLocaleDateString("vi-VN"),
+      expiryDate: expiryDate.toLocaleDateString("vi-VN"),
     });
   } catch (error) {
     console.error("Error:", error);
@@ -197,25 +222,23 @@ app.get("/api/parking-records", (req, res) => {
   try {
     const records = JSON.parse(fs.readFileSync(parkingRecordsFile, "utf8"));
     const currentDate = new Date();
-    const lastDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    ).getDate();
 
-    // Thêm thông tin về thời gian còn lại trong tháng cho mỗi đăng ký
+    // Tính s��� ngày còn lại cho mỗi đăng ký
     const recordsWithTimeLeft = records.map((record) => {
-      const registrationDate = new Date(record.registrationTime);
-      const daysLeft = lastDayOfMonth - currentDate.getDate();
+      const expiryDate = new Date(record.expiryDate);
+      const daysLeft = Math.ceil(
+        (expiryDate - currentDate) / (1000 * 60 * 60 * 24)
+      );
 
       return {
         ...record,
-        daysLeft,
-        expiryDate: new Date(
-          currentDate.getFullYear(),
-          currentDate.getMonth(),
-          lastDayOfMonth
-        ).toLocaleDateString("vi-VN"),
+        daysLeft: record.username === SUPER_ADMIN ? 999 : Math.max(0, daysLeft), // Super admin luôn có thời hạn
+        status:
+          record.username === SUPER_ADMIN
+            ? "Active"
+            : daysLeft > 0
+            ? "Active"
+            : "Expired",
       };
     });
 
@@ -256,29 +279,28 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Hàm kiểm tra và reset đăng ký theo tháng
+// Hàm kiểm tra và reset đăng ký đã hết hạn
 async function checkAndResetExpiredRecords() {
   try {
     const records = JSON.parse(fs.readFileSync(parkingRecordsFile, "utf8"));
     const currentDate = new Date();
 
-    // Lọc ra các record chưa hết hạn
+    // Lọc ra các record chưa hết hạn và của super admin
     const updatedRecords = records.filter((record) => {
-      const registrationDate = new Date(record.registrationTime);
+      // Nếu là super admin thì giữ lại
+      if (record.username === SUPER_ADMIN) {
+        return true;
+      }
 
-      // Kiểm tra xem đã sang tháng mới chưa
-      return (
-        registrationDate.getMonth() === currentDate.getMonth() &&
-        registrationDate.getFullYear() === currentDate.getFullYear()
-      );
+      // Với các tài khoản khác, kiểm tra hết hạn
+      const expiryDate = new Date(record.expiryDate);
+      return currentDate <= expiryDate;
     });
 
     // Nếu có record hết hạn thì cập nhật file
     if (records.length !== updatedRecords.length) {
       console.log(
-        `Đã xóa ${
-          records.length - updatedRecords.length
-        } đăng ký hết hạn tháng trước`
+        `Đã xóa ${records.length - updatedRecords.length} đăng ký hết hạn`
       );
       fs.writeFileSync(
         parkingRecordsFile,
@@ -290,8 +312,8 @@ async function checkAndResetExpiredRecords() {
   }
 }
 
-// Lên lịch chạy vào 00:00:01 ngày đầu tiên của mỗi tháng
-schedule.scheduleJob("1 0 0 1 * *", checkAndResetExpiredRecords);
+// Lên lịch chạy kiểm tra mỗi ngày
+schedule.scheduleJob("0 0 * * *", checkAndResetExpiredRecords);
 
 // Chạy kiểm tra khi khởi động server
 checkAndResetExpiredRecords();
@@ -493,7 +515,7 @@ app.post("/api/admin/cancel-registration", async (req, res) => {
     const { parkingId } = req.body;
     const requestUser = req.headers["x-user"];
 
-    // Ki��m tra quyền admin
+    // Kiểm tra quyền admin
     const isSuperAdmin = requestUser === SUPER_ADMIN;
     const isAdmin = isSuperAdmin || adminUsers.includes(requestUser);
 
