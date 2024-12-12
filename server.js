@@ -12,7 +12,7 @@ const app = express();
 const parkingRecordsFile = "parking-records.json";
 const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "lkamod433@gmail.com";
-const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily_0770";
+const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily0770";
 let adminUsers = [];
 let users = [];
 
@@ -111,11 +111,11 @@ const User = mongoose.model("User", userSchema);
 // Thêm đoạn code này vào server.js để import users mặc định
 const defaultUsers = [
   {
-    username: "lily_0770",
+    username: "lily0770",
     password: "$2b$10$eNoftzO4wLGxL1NWLHlSOeQE0f9I2ryxvtXjw961izQJqCFxziPsO",
   },
   {
-    username: "lka_0770",
+    username: "lka0770",
     password: "$2b$10$eNoftzO4wLGxL1NWLHlSOeQE0f9I2ryxvtXjw961izQJqCFxziPsO",
   },
 ];
