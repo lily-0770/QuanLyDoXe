@@ -1,0 +1,74 @@
+body {
+  background-color: #f8f9fa;
+}
+
+.navbar {
+  background-color: #343a40;
+}
+
+.navbar-brand,
+.nav-link {
+  color: #fff !important;
+}
+
+.card {
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: scale(1.05);
+}
+
+.status-box {
+  text-align: center;
+  padding: 15px;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.status-occupied {
+  background-color: #dc3545;
+}
+
+.status-available {
+  background-color: #28a745;
+}
+
+.footer {
+  background-color: #343a40;
+  color: #fff;
+  text-align: center;
+  padding: 10px 0;
+  margin-top: 20px;
+}
+
+/* Chỗ đã đăng ký bởi người dùng hiện tại */
+.status-box.my-registration {
+    background-color: #28a745;  /* Màu xanh lá */
+    color: white;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+/* Chỗ đã đăng ký bởi người khác */
+.status-box.status-occupied {
+    background-color: #dc3545;  /* Màu đỏ */
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    opacity: 0.7;  /* Làm mờ đi một chút */
+}
+
+/* Card cho chỗ đã đăng ký bởi người dùng hiện tại */
+.card.my-registration {
+    border: 2px solid #28a745;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+}
+
+/* Card cho chỗ đã đăng ký bởi người khác */
+.card.occupied {
+    opacity: 0.7;
+    background-color: #f8f9fa;
+}

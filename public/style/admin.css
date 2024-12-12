@@ -1,0 +1,16 @@
+.table {
+    margin-top: 20px;
+}
+
+.badge {
+    font-size: 0.9em;
+    padding: 0.5em 0.7em;
+}
+
+.btn-sm {
+    min-width: 120px;
+}
+
+#searchInput {
+    min-width: 250px;
+}
