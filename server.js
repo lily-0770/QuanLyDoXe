@@ -10,8 +10,9 @@ const helmet = require("helmet");
 
 const app = express();
 const parkingRecordsFile = "parking-records.json";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const SUPER_ADMIN = process.env.SUPER_ADMIN;
+const PORT = process.env.PORT || 3000;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "lkamod433@gmail.com";
+const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily_0770";
 let adminUsers = [];
 let users = [];
 
