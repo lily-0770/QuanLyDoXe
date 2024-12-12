@@ -6,13 +6,12 @@ const cors = require("cors");
 const nodemailer = require("nodemailer");
 const schedule = require("node-schedule");
 const mongoose = require("mongoose");
+const helmet = require("helmet");
 
 const app = express();
 const parkingRecordsFile = "parking-records.json";
-const ADMIN_EMAIL = "lkamod433@gmail.com"; // Thay bằng email của bạn
-
-const PORT = process.env.PORT || 5000;
-const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily_0770";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const SUPER_ADMIN = process.env.SUPER_ADMIN;
 let adminUsers = [];
 let users = [];
 
@@ -68,7 +67,8 @@ function ensureFileExists(filename, defaultContent = "[]") {
 }
 
 // Middleware
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
 app.use(express.static("public"));
 app.use(express.static("."));
 app.use(
@@ -77,6 +77,7 @@ app.use(
     credentials: true,
   })
 );
+app.use(helmet());
 
 // Middleware kiểm tra đăng nhập
 const checkAuth = (req, res, next) => {
@@ -127,6 +128,11 @@ app.post("/register", async (req, res) => {
     res.json({ message: "Đăng ký thành công" });
   } catch (error) {
     console.error("Registration error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -155,6 +161,11 @@ app.post("/login", async (req, res) => {
     res.json({ message: "Đăng nhập thành công" });
   } catch (error) {
     console.error("Login error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -214,6 +225,11 @@ app.post("/api/parking-records", async (req, res) => {
     });
   } catch (error) {
     console.error("Error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -223,7 +239,7 @@ app.get("/api/parking-records", (req, res) => {
     const records = JSON.parse(fs.readFileSync(parkingRecordsFile, "utf8"));
     const currentDate = new Date();
 
-    // Tính s��� ngày còn lại cho mỗi đăng ký
+    // Tính số ngày còn lại cho mỗi đăng ký
     const recordsWithTimeLeft = records.map((record) => {
       const expiryDate = new Date(record.expiryDate);
       const daysLeft = Math.ceil(
@@ -245,6 +261,11 @@ app.get("/api/parking-records", (req, res) => {
     res.json(recordsWithTimeLeft);
   } catch (error) {
     console.error("Error reading records:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ error: "Không thể đọc dữ liệu" });
   }
 });
@@ -346,6 +367,11 @@ app.post("/api/cancel-request", async (req, res) => {
     res.json({ success: true, message: "Yêu cầu hủy đã được gửi" });
   } catch (error) {
     console.error("Error processing cancel request:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -421,6 +447,11 @@ app.post("/api/approve-cancel-request", async (req, res) => {
     });
   } catch (error) {
     console.error("Error approving cancel request:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ error: error.message });
   }
 });
@@ -463,6 +494,11 @@ app.get("/api/check-admin", (req, res) => {
     });
   } catch (error) {
     console.error("Error in check-admin:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ error: "Không thể kiểm tra quyền admin" });
   }
 });
@@ -547,6 +583,11 @@ app.post("/api/admin/cancel-registration", async (req, res) => {
     res.json({ success: true, message: "Đã xóa đăng ký thành công" });
   } catch (error) {
     console.error("Error cancelling registration:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ error: error.message });
   }
 });
