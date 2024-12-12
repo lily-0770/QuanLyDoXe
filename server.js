@@ -142,10 +142,12 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log("Login attempt:", username);
 
     // Tìm user
     const user = await User.findOne({ username });
     if (!user) {
+      console.log("User not found");
       return res
         .status(401)
         .json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
@@ -153,6 +155,8 @@ app.post("/login", async (req, res) => {
 
     // Kiểm tra mật khẩu
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log("Password valid:", validPassword);
+
     if (!validPassword) {
       return res
         .status(401)
@@ -162,11 +166,6 @@ app.post("/login", async (req, res) => {
     res.json({ message: "Đăng nhập thành công" });
   } catch (error) {
     console.error("Login error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-    });
     res.status(500).json({ message: "Lỗi server" });
   }
 });
