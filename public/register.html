@@ -10,14 +10,36 @@
 
 <body>
     <div class="container">
-        <h2>Register</h2>
-        <form id="register-form">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
-        <div id="message"></div>
+        <div id="loginRequired" class="alert alert-warning" style="display: none;">
+            Vui lòng đăng nhập để đăng ký chỗ đỗ xe!
+            <a href="/login.html" class="alert-link">Đăng nhập ngay</a>
+        </div>
+        <div id="registerForm" style="display: none;">
+            <h2>Register</h2>
+            <form id="register-form">
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit">Register</button>
+            </form>
+            <div id="message"></div>
+        </div>
     </div>
+    <script>
+        // Kiểm tra đăng nhập khi trang load
+        document.addEventListener('DOMContentLoaded', function () {
+            const loggedInUser = localStorage.getItem('loggedInUser');
+            const loginRequired = document.getElementById('loginRequired');
+            const registerForm = document.getElementById('registerForm');
+
+            if (!loggedInUser) {
+                loginRequired.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                loginRequired.style.display = 'none';
+                registerForm.style.display = 'block';
+            }
+        });
+    </script>
     <script src="js/register.js"></script>
 </body>
 

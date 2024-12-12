@@ -5,6 +5,13 @@ function showSection(section) {
 }
 
 function openRegisterForm(spaceId, type) {
+  const loggedInUser = localStorage.getItem("loggedInUser");
+  if (!loggedInUser) {
+    alert("Vui lòng đăng nhập để đăng ký chỗ đỗ xe!");
+    window.location.href = "/login.html";
+    return;
+  }
+
   document.getElementById("registerForm").classList.remove("d-none");
   document.getElementById("parkingId").value = spaceId;
   document.getElementById("vehicleType").value =

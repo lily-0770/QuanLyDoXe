@@ -49,6 +49,17 @@ app.use(
   })
 );
 
+// Middleware kiểm tra đăng nhập
+const checkAuth = (req, res, next) => {
+  const username = req.headers["x-user"];
+  if (!username) {
+    return res
+      .status(401)
+      .json({ error: "Vui lòng đăng nhập để thực hiện chức năng này" });
+  }
+  next();
+};
+
 // Đăng ký người dùng
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
@@ -482,7 +493,7 @@ app.post("/api/admin/cancel-registration", async (req, res) => {
     const { parkingId } = req.body;
     const requestUser = req.headers["x-user"];
 
-    // Kiểm tra quyền admin
+    // Ki��m tra quyền admin
     const isSuperAdmin = requestUser === SUPER_ADMIN;
     const isAdmin = isSuperAdmin || adminUsers.includes(requestUser);
 
