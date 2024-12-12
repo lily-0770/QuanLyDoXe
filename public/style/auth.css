@@ -58,8 +58,28 @@ button:hover {
     background-color: #0056b3;
 }
 
+#message {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+p {
+    margin-top: 20px;
+    color: #666;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
 @media (max-width: 600px) {
     .container {
         padding: 15px;
+        margin: 15px;
     }
 }

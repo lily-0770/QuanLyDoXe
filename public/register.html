@@ -6,18 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
     <link rel="stylesheet" href="style/auth.css">
+    <link rel="stylesheet" href="style/register.css">
 </head>
 
 <body>
-    <div id="registerForm" style="display: none;">
-        <h2>Register</h2>
-        <form id="register-form">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
-        <div id="message"></div>
-    </div>
+    <div class="container">
+        <div id="registerForm">
+            <h2>Register</h2>
+            <form id="register-form">
+                <input type="text" id="username" placeholder="Tên đăng nhập" required>
+                <input type="password" id="password" placeholder="Mật khẩu" required>
+                <button type="submit">Đăng ký</button>
+            </form>
+            <div id="message"></div>
+            <p>Đã có tài khoản? <a href="/login.html">Đăng nhập</a></p>
+        </div>
     </div>
     <script src="js/register.js"></script>
 </body>
