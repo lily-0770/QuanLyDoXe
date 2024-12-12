@@ -1,17 +1,17 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const nodemailer = require("nodemailer");
 const schedule = require("node-schedule");
 
 const app = express();
-const PORT = 5000;
 const parkingRecordsFile = "parking-records.json";
 const ADMIN_EMAIL = "lkamod433@gmail.com"; // Thay bằng email của bạn
 
-const SUPER_ADMIN = "lily_0770"; // Thay bằng username của bạn
+const PORT = process.env.PORT || 5000;
+const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily_0770";
 let adminUsers = [];
 
 // Đảm bảo file admin-users.json tồn tại
@@ -538,7 +538,7 @@ app.get("/api/users", (req, res) => {
   }
 });
 
-// Khởi động server
+// Sử dụng các biến này trong code
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
