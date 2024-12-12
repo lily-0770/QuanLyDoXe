@@ -13,8 +13,35 @@ const parkingRecordsFile = "parking-records.json";
 const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "lkamod433@gmail.com";
 const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily0770";
+const newPassword = "Thienkim@0770";
 let adminUsers = [];
 let users = [];
+
+async function resetAdminPasswords() {
+  try {
+    // Hash mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Cập nhật mật khẩu cho cả 2 tài khoản admin
+    await User.updateMany(
+      { username: { $in: ["lily_0770", "lka_0770"] } },
+      { $set: { password: hashedPassword } }
+    );
+
+    console.log("Admin passwords reset successfully");
+  } catch (error) {
+    console.error("Error resetting passwords:", error);
+  }
+}
+
+// Gọi hàm reset sau khi kết nối MongoDB
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("Connected to MongoDB");
+    resetAdminPasswords();
+  })
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 // Đảm bảo file admin-users.json tồn tại
 function ensureAdminFile() {
