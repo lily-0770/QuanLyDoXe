@@ -124,12 +124,25 @@ const defaultUsers = [
 async function importDefaultUsers() {
   try {
     const count = await User.countDocuments();
+    console.log("Current user count:", count);
+
     if (count === 0) {
+      console.log("Importing default users...");
       await User.insertMany(defaultUsers);
       console.log("Default users imported successfully");
+
+      // Kiểm tra lại sau khi import
+      const newCount = await User.countDocuments();
+      console.log("New user count:", newCount);
+    } else {
+      console.log("Users already exist, skipping import");
     }
   } catch (error) {
     console.error("Error importing default users:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+    });
   }
 }
 
@@ -665,6 +678,21 @@ app.get("/api/users", (req, res) => {
     res.json({ users: userList });
   } catch (error) {
     res.status(500).json({ error: "Không thể đọc danh sách người dùng" });
+  }
+});
+
+// Thêm route để kiểm tra dữ liệu
+app.get("/api/check-users", async (req, res) => {
+  try {
+    const users = await User.find({});
+    console.log("Current users in database:", users);
+    res.json({
+      count: users.length,
+      users: users.map((u) => ({ username: u.username })), // Chỉ trả về username để bảo mật
+    });
+  } catch (error) {
+    console.error("Error checking users:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
