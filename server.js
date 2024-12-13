@@ -723,6 +723,43 @@ app.get("/api/check-users", async (req, res) => {
   }
 });
 
+// API đổi mật khẩu
+app.post("/api/change-password", async (req, res) => {
+  try {
+    const { username, newPassword } = req.body;
+    const requestUser = req.headers["x-user"];
+
+    // Kiểm tra quyền super admin
+    if (requestUser !== SUPER_ADMIN) {
+      return res.status(403).json({ error: "Không có quyền thực hiện" });
+    }
+
+    // Hash mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Cập nhật trong MongoDB
+    await User.updateOne(
+      { username: username },
+      { $set: { password: hashedPassword } }
+    );
+
+    // Cập nhật trong users.json
+    const users = JSON.parse(fs.readFileSync("users.json", "utf8"));
+    const updatedUsers = users.map((user) => {
+      if (user.username === username) {
+        return { ...user, password: hashedPassword };
+      }
+      return user;
+    });
+    fs.writeFileSync("users.json", JSON.stringify(updatedUsers, null, 2));
+
+    res.json({ message: "Đã đổi mật khẩu thành công" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ error: "Không thể đổi mật khẩu" });
+  }
+});
+
 // Sử dụng các biến này trong code
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
