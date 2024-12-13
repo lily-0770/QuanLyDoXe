@@ -19,15 +19,11 @@ let users = [];
 
 async function resetAdminPasswords() {
   try {
-    // Hash mật khẩu mới
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Cập nhật mật khẩu cho cả 2 tài khoản admin
     await User.updateMany(
-      { username: { $in: ["lily_0770", "lka_0770"] } },
+      { username: { $in: ["lily0770", "lka0770"] } },
       { $set: { password: hashedPassword } }
     );
-
     console.log("Admin passwords reset successfully");
   } catch (error) {
     console.error("Error resetting passwords:", error);
@@ -435,7 +431,7 @@ schedule.scheduleJob("0 0 * * *", checkAndResetExpiredRecords);
 // Chạy kiểm tra khi khởi động server
 checkAndResetExpiredRecords();
 
-// API gửi yêu cầu hủy (không gửi email)
+// API g��i yêu cầu hủy (không gửi email)
 app.post("/api/cancel-request", async (req, res) => {
   try {
     const { parkingId, username, licensePlate, studentClass, reason } =
