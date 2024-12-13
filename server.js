@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "lkamod433@gmail.com";
 const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily0770";
 const newPassword = "Thienkim@0770";
+const newAdminPassword = "Thienkim@0770";
 let adminUsers = [];
 let users = [];
 
@@ -287,7 +288,7 @@ app.post("/api/parking-records", async (req, res) => {
         (record) => record.parkingId === parkingId && record.status === "Active"
       )
     ) {
-      return res.status(400).json({ message: "Chỗ này đã có người đăng ký" });
+      return res.status(400).json({ message: "Chỗ này đã có người đăng k��" });
     }
 
     // Kiểm tra người dùng đã đăng ký chỗ khác (trừ super admin)
@@ -431,7 +432,7 @@ schedule.scheduleJob("0 0 * * *", checkAndResetExpiredRecords);
 // Chạy kiểm tra khi khởi động server
 checkAndResetExpiredRecords();
 
-// API g��i yêu cầu hủy (không gửi email)
+// API gửi yêu cầu hủy (không gửi email)
 app.post("/api/cancel-request", async (req, res) => {
   try {
     const { parkingId, username, licensePlate, studentClass, reason } =
@@ -753,6 +754,47 @@ app.post("/api/change-password", async (req, res) => {
   } catch (error) {
     console.error("Error changing password:", error);
     res.status(500).json({ error: "Không thể đổi mật khẩu" });
+  }
+});
+
+// Hàm reset mật khẩu admin
+async function resetAdminAccounts() {
+  try {
+    // Xóa tất cả tài khoản hiện có
+    await User.deleteMany({});
+    console.log("Đã xóa tất cả tài khoản cũ");
+
+    // Hash mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newAdminPassword, 10);
+
+    // Tạo tài khoản admin mới
+    const adminAccounts = [
+      { username: "lily0770", password: hashedPassword },
+      { username: "lka0770", password: hashedPassword },
+    ];
+
+    // Thêm tài khoản admin mới vào database
+    await User.insertMany(adminAccounts);
+    console.log("Đã tạo lại tài khoản admin thành công");
+
+    return true;
+  } catch (error) {
+    console.error("Lỗi khi tạo lại tài khoản admin:", error);
+    return false;
+  }
+}
+
+// Thêm API endpoint để reset tài khoản admin (chỉ sử dụng trong development)
+app.post("/api/reset-admin", async (req, res) => {
+  try {
+    const success = await resetAdminAccounts();
+    if (success) {
+      res.json({ message: "Đã tạo lại tài khoản admin thành công" });
+    } else {
+      res.status(500).json({ message: "Không thể tạo lại tài khoản admin" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
