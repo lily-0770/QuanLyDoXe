@@ -6,6 +6,9 @@ function showSection(section) {
 
 function openRegisterForm(spaceId, type) {
   const loggedInUser = localStorage.getItem("loggedInUser");
+
+  console.log("Current logged in user:", loggedInUser);
+
   if (!loggedInUser) {
     alert("Vui lòng đăng nhập để đăng ký chỗ đỗ xe!");
     window.location.href = "/login.html";
@@ -127,7 +130,7 @@ document.getElementById("logout-link")?.addEventListener("click", function (e) {
   window.location.reload();
 });
 
-// Tạo các chỗ đỗ xe khi trang được load
+// Tạo các chỗ đỗ xe khi trang đ��ợc load
 function generateParkingSpaces() {
   // Tạo chỗ đỗ xe đạp
   const bikeContainer = document.querySelector("#bikeSection .row");
@@ -249,3 +252,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Thêm event listener cho khi focus li trang
 window.addEventListener("focus", updateParkingStatus);
+
+// Thêm function kiểm tra đăng nhập khi trang load
+document.addEventListener("DOMContentLoaded", function () {
+  const loggedInUser = localStorage.getItem("loggedInUser");
+  console.log("Page loaded, checking login status:", loggedInUser);
+
+  // Cập nhật UI dựa trên trạng thái đăng nhập
+  if (loggedInUser) {
+    document.getElementById("login-section").classList.add("d-none");
+    document.getElementById("user-section").classList.remove("d-none");
+    document.getElementById("logout-section").classList.remove("d-none");
+    document.getElementById(
+      "username-display"
+    ).textContent = `Xin chào, ${loggedInUser}`;
+  } else {
+    document.getElementById("login-section").classList.remove("d-none");
+    document.getElementById("user-section").classList.add("d-none");
+    document.getElementById("logout-section").classList.add("d-none");
+  }
+});
