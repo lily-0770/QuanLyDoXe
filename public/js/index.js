@@ -1,6 +1,3 @@
-// Khai báo biến toàn cục để lưu trạng thái đăng nhập
-let loggedInUser = localStorage.getItem("loggedInUser");
-
 function showSection(section) {
   document.getElementById("bikeSection").classList.add("d-none");
   document.getElementById("motorbikeSection").classList.add("d-none");
@@ -8,19 +5,10 @@ function showSection(section) {
 }
 
 function openRegisterForm(spaceId, type) {
-  // Kiểm tra đăng nhập
-  const loggedInUser = localStorage.getItem("loggedInUser");
   console.log("Opening register form:", {
     spaceId,
     type,
-    loggedInUser,
   });
-
-  // Nếu chưa đăng nhập, vô hiệu hóa nút đăng ký
-  if (!loggedInUser) {
-    alert("Vui lòng đăng nhập để đăng ký chỗ đỗ xe!");
-    return;
-  }
 
   document.getElementById("registerForm").classList.remove("d-none");
   document.getElementById("parkingId").value = spaceId;
@@ -133,6 +121,7 @@ async function checkLoginStatus() {
 document.getElementById("logout-link")?.addEventListener("click", function (e) {
   e.preventDefault();
   localStorage.removeItem("loggedInUser");
+  updateRegisterButtonsVisibility();
   checkLoginStatus();
   window.location.reload();
 });
@@ -252,6 +241,7 @@ async function updateParkingStatus() {
 
 // Cập nhật DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {
+  updateRegisterButtonsVisibility();
   checkLoginStatus();
   generateParkingSpaces();
   updateParkingStatus();
@@ -294,8 +284,14 @@ console.log("Checking localStorage:", {
   allKeys: Object.keys(localStorage),
 });
 
-// Thêm function để cập nhật trạng thái nút đăng ký
-function updateRegisterButtons() {
+// Gọi function khi trang load
+document.addEventListener("DOMContentLoaded", function () {
+  updateRegisterButtonsVisibility();
+  checkLoginStatus();
+});
+
+// Thêm function để ẩn/hiện nút đăng ký
+function updateRegisterButtonsVisibility() {
   const loggedInUser = localStorage.getItem("loggedInUser");
   const registerButtons = document.querySelectorAll(
     'button[onclick*="openRegisterForm"]'
@@ -303,21 +299,9 @@ function updateRegisterButtons() {
 
   registerButtons.forEach((button) => {
     if (!loggedInUser) {
-      button.disabled = true;
-      button.title = "Vui lòng đăng nhập để đăng ký";
-      button.classList.add("btn-secondary");
-      button.classList.remove("btn-primary");
+      button.style.display = "none"; // Ẩn nút khi chưa đăng nhập
     } else {
-      button.disabled = false;
-      button.title = "";
-      button.classList.add("btn-primary");
-      button.classList.remove("btn-secondary");
+      button.style.display = "block"; // Hiện nút khi đã đăng nhập
     }
   });
 }
-
-// Gọi function khi trang load và sau khi đăng nhập/đăng xuất
-document.addEventListener("DOMContentLoaded", function () {
-  updateRegisterButtons();
-  checkLoginStatus();
-});
