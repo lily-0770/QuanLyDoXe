@@ -885,8 +885,11 @@ app.get("/api/export-user-list", async (req, res) => {
       return res.status(403).json({ error: "Không có quyền truy cập" });
     }
 
-    // Lấy danh sách người dùng từ MongoDB
+    // Lấy danh sách người dùng từ MongoDB và parking records
     const users = await User.find({});
+    const parkingRecords = JSON.parse(
+      fs.readFileSync(parkingRecordsFile, "utf8")
+    );
 
     // Tạo workbook mới
     const workbook = new Excel.Workbook();
@@ -895,10 +898,15 @@ app.get("/api/export-user-list", async (req, res) => {
     // Định nghĩa các cột
     worksheet.columns = [
       { header: "STT", key: "stt", width: 5 },
-      { header: "Tên đăng nhập", key: "username", width: 20 },
+      { header: "Tên đăng nhập", key: "username", width: 15 },
       { header: "Vai trò", key: "role", width: 15 },
+      { header: "Mã chỗ đỗ", key: "parkingId", width: 10 },
+      { header: "Loại xe", key: "vehicleType", width: 20 },
+      { header: "Tên học sinh", key: "studentName", width: 20 },
+      { header: "Lớp", key: "studentClass", width: 10 },
+      { header: "Ngày đăng ký", key: "registrationDate", width: 15 },
+      { header: "Ngày hết hạn", key: "expiryDate", width: 15 },
       { header: "Trạng thái", key: "status", width: 15 },
-      { header: "Ngày tạo", key: "createdAt", width: 20 },
     ];
 
     // Style cho header
@@ -911,6 +919,11 @@ app.get("/api/export-user-list", async (req, res) => {
 
     // Thêm dữ liệu
     users.forEach((user, index) => {
+      // Tìm thông tin đăng ký của user
+      const parkingRecord =
+        parkingRecords.find((record) => record.username === user.username) ||
+        {};
+
       worksheet.addRow({
         stt: index + 1,
         username: user.username,
@@ -920,10 +933,17 @@ app.get("/api/export-user-list", async (req, res) => {
             : adminUsers.includes(user.username)
             ? "Admin"
             : "Người dùng",
-        status: "Hoạt động",
-        createdAt: user.createdAt
-          ? new Date(user.createdAt).toLocaleDateString("vi-VN")
+        parkingId: parkingRecord.parkingId || "Chưa đăng ký",
+        vehicleType: parkingRecord.vehicleType || "N/A",
+        studentName: parkingRecord.licensePlate || "N/A",
+        studentClass: parkingRecord.studentClass || "N/A",
+        registrationDate: parkingRecord.registrationDate
+          ? new Date(parkingRecord.registrationDate).toLocaleDateString("vi-VN")
           : "N/A",
+        expiryDate: parkingRecord.expiryDate
+          ? new Date(parkingRecord.expiryDate).toLocaleDateString("vi-VN")
+          : "N/A",
+        status: parkingRecord.status || "Chưa đăng ký",
       });
     });
 
@@ -939,10 +959,10 @@ app.get("/api/export-user-list", async (req, res) => {
       });
     });
 
-    // Căn giữa cột STT và Trạng thái
-    worksheet.getColumn("stt").alignment = { horizontal: "center" };
-    worksheet.getColumn("status").alignment = { horizontal: "center" };
-    worksheet.getColumn("role").alignment = { horizontal: "center" };
+    // Căn giữa một số cột
+    ["stt", "parkingId", "status", "role"].forEach((col) => {
+      worksheet.getColumn(col).alignment = { horizontal: "center" };
+    });
 
     // Set response headers
     res.setHeader(

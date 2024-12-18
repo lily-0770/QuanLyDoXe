@@ -482,3 +482,30 @@ async function approveCancelRequest(parkingId, approved) {
     alert("Lỗi khi xử lý yêu cầu: " + error.message);
   }
 }
+
+document.getElementById("exportButton").addEventListener("click", async () => {
+  try {
+    const response = await fetch("/api/export-user-list", {
+      headers: {
+        "x-user": localStorage.getItem("loggedInUser"),
+      },
+    });
+
+    if (response.ok) {
+      // Tự động tải file Excel
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "danh-sach-nguoi-dung.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      alert("Không có quyền xuất dữ liệu");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Lỗi khi xuất dữ liệu");
+  }
+});
