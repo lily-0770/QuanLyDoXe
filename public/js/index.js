@@ -6,14 +6,20 @@ function showSection(section) {
 
 function openRegisterForm(spaceId, type) {
   const loggedInUser = localStorage.getItem("loggedInUser");
-
-  console.log("Current logged in user:", loggedInUser);
+  console.log("Opening register form:", {
+    spaceId,
+    type,
+    loggedInUser,
+  });
 
   if (!loggedInUser) {
+    console.log("No user found, redirecting to login");
     alert("Vui lòng đăng nhập để đăng ký chỗ đỗ xe!");
     window.location.href = "/login.html";
     return;
   }
+
+  console.log("User authenticated, opening form");
 
   document.getElementById("registerForm").classList.remove("d-none");
   document.getElementById("parkingId").value = spaceId;
@@ -130,7 +136,7 @@ document.getElementById("logout-link")?.addEventListener("click", function (e) {
   window.location.reload();
 });
 
-// Tạo các chỗ đỗ xe khi trang đ��ợc load
+// Tạo các chỗ đỗ xe khi trang đợc load
 function generateParkingSpaces() {
   // Tạo chỗ đỗ xe đạp
   const bikeContainer = document.querySelector("#bikeSection .row");
@@ -255,20 +261,21 @@ window.addEventListener("focus", updateParkingStatus);
 
 // Thêm function kiểm tra đăng nhập khi trang load
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("Page loaded, checking initial state");
   const loggedInUser = localStorage.getItem("loggedInUser");
-  console.log("Page loaded, checking login status:", loggedInUser);
 
-  // Cập nhật UI dựa trên trạng thái đăng nhập
-  if (loggedInUser) {
-    document.getElementById("login-section").classList.add("d-none");
-    document.getElementById("user-section").classList.remove("d-none");
-    document.getElementById("logout-section").classList.remove("d-none");
-    document.getElementById(
-      "username-display"
-    ).textContent = `Xin chào, ${loggedInUser}`;
-  } else {
-    document.getElementById("login-section").classList.remove("d-none");
-    document.getElementById("user-section").classList.add("d-none");
-    document.getElementById("logout-section").classList.add("d-none");
-  }
+  console.log("Initial login check:", {
+    loggedInUser,
+    loginSection: document.getElementById("login-section"),
+    userSection: document.getElementById("user-section"),
+    logoutSection: document.getElementById("logout-section"),
+  });
+
+  checkLoginStatus(); // Gọi function kiểm tra đăng nhập
+});
+
+// Thêm logs để debug
+console.log("Checking localStorage:", {
+  loggedInUser: localStorage.getItem("loggedInUser"),
+  allKeys: Object.keys(localStorage),
 });

@@ -1,11 +1,14 @@
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  console.log("Login attempt started");
 
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
 
+  console.log("Login credentials:", { username });
+
   try {
-    const response = await fetch("/login", {
+    const response = await fetch("/api/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -13,21 +16,18 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       body: JSON.stringify({ username, password }),
     });
 
-    const data = await response.json();
+    console.log("Login response:", response);
 
-    if (!response.ok) {
-      // Hiển thị thông báo lỗi từ server
-      document.getElementById("loginError").textContent = data.message;
-      document.getElementById("loginError").style.display = "block";
-      return;
+    if (response.ok) {
+      localStorage.setItem("loggedInUser", username);
+      console.log("Login successful, stored user:", username);
+      window.location.href = "/index.html";
+    } else {
+      console.log("Login failed");
+      alert("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
     }
-
-    // Nếu đăng nhập thành công
-    localStorage.setItem("loggedInUser", username);
-    window.location.href = "/index.html";
   } catch (error) {
     console.error("Login error:", error);
-    document.getElementById("loginError").textContent = "Lỗi kết nối server";
-    document.getElementById("loginError").style.display = "block";
+    alert("Có lỗi xảy ra khi đăng nhập.");
   }
 });
