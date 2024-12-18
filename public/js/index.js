@@ -8,22 +8,19 @@ function showSection(section) {
 }
 
 function openRegisterForm(spaceId, type) {
-  // Lấy lại giá trị mới nhất từ localStorage
-  loggedInUser = localStorage.getItem("loggedInUser");
+  // Kiểm tra đăng nhập
+  const loggedInUser = localStorage.getItem("loggedInUser");
   console.log("Opening register form:", {
     spaceId,
     type,
     loggedInUser,
   });
 
+  // Nếu chưa đăng nhập, vô hiệu hóa nút đăng ký
   if (!loggedInUser) {
-    console.log("No user found, redirecting to login");
     alert("Vui lòng đăng nhập để đăng ký chỗ đỗ xe!");
-    window.location.href = "/login.html";
     return;
   }
-
-  console.log("User authenticated, opening form");
 
   document.getElementById("registerForm").classList.remove("d-none");
   document.getElementById("parkingId").value = spaceId;
@@ -295,4 +292,32 @@ document.addEventListener("DOMContentLoaded", function () {
 console.log("Checking localStorage:", {
   loggedInUser: localStorage.getItem("loggedInUser"),
   allKeys: Object.keys(localStorage),
+});
+
+// Thêm function để cập nhật trạng thái nút đăng ký
+function updateRegisterButtons() {
+  const loggedInUser = localStorage.getItem("loggedInUser");
+  const registerButtons = document.querySelectorAll(
+    'button[onclick*="openRegisterForm"]'
+  );
+
+  registerButtons.forEach((button) => {
+    if (!loggedInUser) {
+      button.disabled = true;
+      button.title = "Vui lòng đăng nhập để đăng ký";
+      button.classList.add("btn-secondary");
+      button.classList.remove("btn-primary");
+    } else {
+      button.disabled = false;
+      button.title = "";
+      button.classList.add("btn-primary");
+      button.classList.remove("btn-secondary");
+    }
+  });
+}
+
+// Gọi function khi trang load và sau khi đăng nhập/đăng xuất
+document.addEventListener("DOMContentLoaded", function () {
+  updateRegisterButtons();
+  checkLoginStatus();
 });
