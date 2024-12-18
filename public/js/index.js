@@ -1,3 +1,6 @@
+// Khai báo biến toàn cục để lưu trạng thái đăng nhập
+let loggedInUser = localStorage.getItem("loggedInUser");
+
 function showSection(section) {
   document.getElementById("bikeSection").classList.add("d-none");
   document.getElementById("motorbikeSection").classList.add("d-none");
@@ -5,7 +8,8 @@ function showSection(section) {
 }
 
 function openRegisterForm(spaceId, type) {
-  const loggedInUser = localStorage.getItem("loggedInUser");
+  // Lấy lại giá trị mới nhất từ localStorage
+  loggedInUser = localStorage.getItem("loggedInUser");
   console.log("Opening register form:", {
     spaceId,
     type,
@@ -262,7 +266,8 @@ window.addEventListener("focus", updateParkingStatus);
 // Thêm function kiểm tra đăng nhập khi trang load
 document.addEventListener("DOMContentLoaded", function () {
   console.log("Page loaded, checking initial state");
-  const loggedInUser = localStorage.getItem("loggedInUser");
+  // Cập nhật biến toàn cục
+  loggedInUser = localStorage.getItem("loggedInUser");
 
   console.log("Initial login check:", {
     loggedInUser,
@@ -271,7 +276,19 @@ document.addEventListener("DOMContentLoaded", function () {
     logoutSection: document.getElementById("logout-section"),
   });
 
-  checkLoginStatus(); // Gọi function kiểm tra đăng nhập
+  // Cập nhật UI dựa trên trạng thái đăng nhập
+  if (loggedInUser) {
+    document.getElementById("login-section").classList.add("d-none");
+    document.getElementById("user-section").classList.remove("d-none");
+    document.getElementById("logout-section").classList.remove("d-none");
+    document.getElementById(
+      "username-display"
+    ).textContent = `Xin chào, ${loggedInUser}`;
+  } else {
+    document.getElementById("login-section").classList.remove("d-none");
+    document.getElementById("user-section").classList.add("d-none");
+    document.getElementById("logout-section").classList.add("d-none");
+  }
 });
 
 // Thêm logs để debug
