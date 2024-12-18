@@ -7,6 +7,7 @@ const nodemailer = require("nodemailer");
 const schedule = require("node-schedule");
 const mongoose = require("mongoose");
 const helmet = require("helmet");
+const Excel = require("exceljs");
 
 const app = express();
 const parkingRecordsFile = "parking-records.json";
@@ -190,7 +191,7 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Tên đăng nhập đã tồn tại" });
     }
 
-    // Mã hóa mật khẩu
+    // M�� hóa mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Tạo user mới
@@ -288,7 +289,7 @@ app.post("/api/parking-records", async (req, res) => {
         (record) => record.parkingId === parkingId && record.status === "Active"
       )
     ) {
-      return res.status(400).json({ message: "Chỗ này đã có người đăng k��" });
+      return res.status(400).json({ message: "Chỗ này đã có người đăng ký" });
     }
 
     // Kiểm tra người dùng đã đăng ký chỗ khác (trừ super admin)
@@ -795,6 +796,169 @@ app.post("/api/reset-admin", async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// Cập nhật API xuất Excel
+app.get("/api/export-users", async (req, res) => {
+  try {
+    const requestUser = req.headers["x-user"];
+
+    // Kiểm tra quyền admin
+    if (requestUser !== SUPER_ADMIN && !adminUsers.includes(requestUser)) {
+      return res.status(403).json({ error: "Không có quyền truy cập" });
+    }
+
+    // Đọc dữ liệu từ parking-records.json
+    const records = JSON.parse(fs.readFileSync(parkingRecordsFile, "utf8"));
+
+    // Tạo workbook mới
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet("Danh sách đăng ký");
+
+    // Định nghĩa các cột
+    worksheet.columns = [
+      { header: "Mã chỗ đỗ", key: "parkingId", width: 10 },
+      { header: "Loại xe", key: "vehicleType", width: 20 },
+      { header: "Tên học sinh", key: "studentName", width: 20 },
+      { header: "Lớp", key: "studentClass", width: 10 },
+      { header: "Tên đăng nhập", key: "username", width: 15 },
+      { header: "Ngày đăng ký", key: "registrationDate", width: 15 },
+      { header: "Ngày hết hạn", key: "expiryDate", width: 15 },
+      { header: "Trạng thái", key: "status", width: 15 },
+    ];
+
+    // Style cho header
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+
+    // Thêm dữ liệu
+    records.forEach((record) => {
+      worksheet.addRow({
+        parkingId: record.parkingId,
+        vehicleType: record.vehicleType,
+        studentName: record.licensePlate,
+        studentClass: record.studentClass,
+        username: record.username,
+        registrationDate: new Date(record.registrationDate).toLocaleDateString(
+          "vi-VN"
+        ),
+        expiryDate: new Date(record.expiryDate).toLocaleDateString("vi-VN"),
+        status: record.status === "Active" ? "Đang hoạt động" : "Hết hạn",
+      });
+    });
+
+    // Tự động điều chỉnh độ rộng cột
+    worksheet.columns.forEach((column) => {
+      column.width = Math.max(column.width, 12);
+    });
+
+    // Set response headers
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=danh-sach-dang-ky.xlsx"
+    );
+
+    // Gửi file
+    await workbook.xlsx.write(res);
+  } catch (error) {
+    console.error("Error exporting data:", error);
+    res.status(500).json({ error: "Không thể xuất dữ liệu" });
+  }
+});
+
+// API xuất danh sách người dùng ra Excel
+app.get("/api/export-user-list", async (req, res) => {
+  try {
+    const requestUser = req.headers["x-user"];
+
+    // Kiểm tra quyền super admin
+    if (requestUser !== SUPER_ADMIN) {
+      return res.status(403).json({ error: "Không có quyền truy cập" });
+    }
+
+    // Lấy danh sách người dùng từ MongoDB
+    const users = await User.find({});
+
+    // Tạo workbook mới
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet("Danh sách người dùng");
+
+    // Định nghĩa các cột
+    worksheet.columns = [
+      { header: "STT", key: "stt", width: 5 },
+      { header: "Tên đăng nhập", key: "username", width: 20 },
+      { header: "Vai trò", key: "role", width: 15 },
+      { header: "Trạng thái", key: "status", width: 15 },
+      { header: "Ngày tạo", key: "createdAt", width: 20 },
+    ];
+
+    // Style cho header
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+
+    // Thêm dữ liệu
+    users.forEach((user, index) => {
+      worksheet.addRow({
+        stt: index + 1,
+        username: user.username,
+        role:
+          user.username === SUPER_ADMIN
+            ? "Super Admin"
+            : adminUsers.includes(user.username)
+            ? "Admin"
+            : "Người dùng",
+        status: "Hoạt động",
+        createdAt: user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString("vi-VN")
+          : "N/A",
+      });
+    });
+
+    // Border cho tất cả các ô có dữ liệu
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+    });
+
+    // Căn giữa cột STT và Trạng thái
+    worksheet.getColumn("stt").alignment = { horizontal: "center" };
+    worksheet.getColumn("status").alignment = { horizontal: "center" };
+    worksheet.getColumn("role").alignment = { horizontal: "center" };
+
+    // Set response headers
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=danh-sach-nguoi-dung.xlsx"
+    );
+
+    // Gửi file
+    await workbook.xlsx.write(res);
+  } catch (error) {
+    console.error("Error exporting user list:", error);
+    res.status(500).json({ error: "Không thể xuất dữ liệu người dùng" });
   }
 });
 
