@@ -29,6 +29,7 @@ function closeRegisterForm() {
 
 async function submitRegistration(event) {
   event.preventDefault();
+
   const parkingId = document.getElementById("parkingId").value;
   const vehicleType = document.getElementById("vehicleType").value;
   const licensePlate = document.getElementById("licensePlate").value;
@@ -36,24 +37,11 @@ async function submitRegistration(event) {
   const username = localStorage.getItem("loggedInUser");
 
   try {
-    // Kiểm tra xem người dùng đã đăng ký chỗ nào chưa
-    const response = await fetch("/api/parking-records");
-    const records = await response.json();
-    const existingRegistration = records.find(
-      (record) => record.username === username
-    );
-
-    if (existingRegistration) {
-      alert("Bạn đã đăng ký một chỗ rồi. Không thể đăng ký thêm!");
-      closeRegisterForm();
-      return;
-    }
-
-    // Tiếp tục đăng ký nếu chưa có chỗ nào
-    const registerResponse = await fetch("/api/parking-records", {
+    const response = await fetch("/api/parking-records", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-user": username,
       },
       body: JSON.stringify({
         parkingId,
@@ -64,19 +52,16 @@ async function submitRegistration(event) {
       }),
     });
 
-    const result = await registerResponse.json();
-    if (registerResponse.ok) {
-      alert(
-        `Đăng ký thành công! Chỗ đỗ xe của bạn sẽ hết hạn vào ngày ${result.expiryDate}`
-      );
-      closeRegisterForm();
-      updateParkingStatus();
+    const data = await response.json();
+    if (response.ok) {
+      alert(data.message);
+      location.reload();
     } else {
-      alert(result.message);
+      alert(data.message || "Có lỗi xảy ra");
     }
   } catch (error) {
     console.error("Error:", error);
-    alert("Đăng ký thất bại. Vui lòng thử lại.");
+    alert("Có lỗi xảy ra khi đăng ký");
   }
 }
 

@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
@@ -15,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "lkamod433@gmail.com";
 const SUPER_ADMIN = process.env.SUPER_ADMIN || "lily0770";
 const newPassword = "Thienkim@0770";
-const newAdminPassword = "Thienkim@0770";
+const newAdminPassword = "Thienkim@07770";
 let adminUsers = [];
 let users = [];
 
@@ -214,30 +215,47 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log("Login attempt:", username);
+    console.log("Login attempt:", {
+      username,
+      timestamp: new Date().toISOString(),
+    });
 
-    // Tìm user
+    // Kiểm tra user trong MongoDB
     const user = await User.findOne({ username });
+    console.log("Database query result:", {
+      found: !!user,
+      username: user?.username,
+    });
+
     if (!user) {
       console.log("User not found");
-      return res
-        .status(401)
-        .json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
+      return res.status(401).json({ message: "Tài khoản không tồn tại" });
     }
 
-    // Kiểm tra mật khẩu
-    const validPassword = await bcrypt.compare(password, user.password);
-    console.log("Password valid:", validPassword);
+    // So sánh mật khẩu
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log("Password validation:", {
+      isValid: isValidPassword,
+      username,
+    });
 
-    if (!validPassword) {
-      return res
-        .status(401)
-        .json({ message: "Tên đăng nhập hoặc mật khẩu không đúng" });
+    if (!isValidPassword) {
+      console.log("Invalid password");
+      return res.status(401).json({ message: "Mật khẩu không đúng" });
     }
 
-    res.json({ message: "Đăng nhập thành công" });
+    // Đăng nhập thành công
+    console.log("Login successful:", { username });
+    res.json({
+      success: true,
+      message: "Đăng nhập thành công",
+    });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error:", {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -255,13 +273,8 @@ app.get("/api/check-users", (req, res) => {
 
 app.post("/api/parking-records", async (req, res) => {
   try {
-    // Kiểm tra đăng nhập
-    const username = req.headers["x-user"];
-    if (!username) {
-      return res.status(401).json({ message: "Vui lòng đăng nhập để đăng ký" });
-    }
-
     const { parkingId, vehicleType, licensePlate, studentClass } = req.body;
+    const username = req.headers["x-user"] || req.body.username;
 
     // Kiểm tra dữ liệu đầu vào
     if (!parkingId || !vehicleType || !licensePlate || !studentClass) {
@@ -269,11 +282,6 @@ app.post("/api/parking-records", async (req, res) => {
         .status(400)
         .json({ message: "Vui lòng điền đầy đủ thông tin" });
     }
-
-    // Tính ngày hết hạn (30 ngày)
-    const registrationDate = new Date();
-    const expiryDate = new Date(registrationDate);
-    expiryDate.setDate(registrationDate.getDate() + 30);
 
     // Đọc dữ liệu hiện tại
     let records = [];
@@ -292,15 +300,19 @@ app.post("/api/parking-records", async (req, res) => {
       return res.status(400).json({ message: "Chỗ này đã có người đăng ký" });
     }
 
-    // Kiểm tra người dùng đã đăng ký chỗ khác (trừ super admin)
-    if (
-      username !== SUPER_ADMIN &&
-      records.some(
-        (record) => record.username === username && record.status === "Active"
-      )
-    ) {
-      return res.status(400).json({ message: "Bạn đã đăng ký một chỗ rồi" });
-    }
+    // Tạo ngày đăng ký và hết hạn
+    const registrationDate = new Date();
+    const expiryDate = new Date();
+    expiryDate.setDate(registrationDate.getDate() + 30);
+
+    // Format ngày tháng theo định dạng Việt Nam
+    const formatDate = (date) => {
+      return date.toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    };
 
     // Tạo record mới
     const newRecord = {
@@ -308,9 +320,9 @@ app.post("/api/parking-records", async (req, res) => {
       vehicleType,
       licensePlate,
       studentClass,
-      username,
-      registrationDate: registrationDate.toISOString(),
-      expiryDate: expiryDate.toISOString(),
+      username: username || "Anonymous",
+      registrationDate: formatDate(registrationDate),
+      expiryDate: formatDate(expiryDate),
       status: "Active",
     };
 
@@ -320,7 +332,8 @@ app.post("/api/parking-records", async (req, res) => {
 
     res.json({
       message: "Đăng ký thành công",
-      expiryDate: expiryDate.toLocaleDateString("vi-VN"),
+      registrationDate: formatDate(registrationDate),
+      expiryDate: formatDate(expiryDate),
     });
   } catch (error) {
     console.error("Error:", error);
@@ -328,38 +341,44 @@ app.post("/api/parking-records", async (req, res) => {
   }
 });
 
+// API lấy danh sách đăng ký
 app.get("/api/parking-records", (req, res) => {
   try {
     const records = JSON.parse(fs.readFileSync(parkingRecordsFile, "utf8"));
     const currentDate = new Date();
 
-    // Tính số ngày còn lại cho mỗi đăng ký
-    const recordsWithTimeLeft = records.map((record) => {
-      const expiryDate = new Date(record.expiryDate);
+    // Format lại dữ liệu trước khi gửi
+    const formattedRecords = records.map((record) => {
+      // Chuyển đổi ngày tháng từ chuỗi sang Date object
+      const registrationParts = record.registrationDate.split("/");
+      const expiryParts = record.expiryDate.split("/");
+
+      const registrationDate = new Date(
+        registrationParts[2],
+        registrationParts[1] - 1,
+        registrationParts[0]
+      );
+
+      const expiryDate = new Date(
+        expiryParts[2],
+        expiryParts[1] - 1,
+        expiryParts[0]
+      );
+
       const daysLeft = Math.ceil(
         (expiryDate - currentDate) / (1000 * 60 * 60 * 24)
       );
 
       return {
         ...record,
-        daysLeft: record.username === SUPER_ADMIN ? 999 : Math.max(0, daysLeft), // Super admin luôn có thời hạn
-        status:
-          record.username === SUPER_ADMIN
-            ? "Active"
-            : daysLeft > 0
-            ? "Active"
-            : "Expired",
+        daysLeft: Math.max(0, daysLeft),
+        status: daysLeft > 0 ? "Active" : "Expired",
       };
     });
 
-    res.json(recordsWithTimeLeft);
+    res.json(formattedRecords);
   } catch (error) {
     console.error("Error reading records:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-    });
     res.status(500).json({ error: "Không thể đọc dữ liệu" });
   }
 });
@@ -799,7 +818,7 @@ app.post("/api/reset-admin", async (req, res) => {
   }
 });
 
-// Cập nhật API xuất Excel
+// C��p nhật API xuất Excel
 app.get("/api/export-users", async (req, res) => {
   try {
     const requestUser = req.headers["x-user"];
@@ -982,7 +1001,66 @@ app.get("/api/export-user-list", async (req, res) => {
   }
 });
 
+// Function để reset database chỉ giữ lại tài khoản admin
+async function resetToSingleAdmin() {
+  try {
+    // Xóa tất cả user hiện tại
+    await User.deleteMany({});
+    console.log("Đã xóa tất cả tài khoản");
+
+    // Tạo mới tài khoản admin
+    const hashedPassword = await bcrypt.hash("Thienkim@0770", 10);
+    const adminUser = new User({
+      username: "lily0770",
+      password: hashedPassword,
+    });
+
+    await adminUser.save();
+    console.log("Đã tạo lại tài khoản admin");
+
+    // Xóa tất cả parking records
+    fs.writeFileSync(parkingRecordsFile, JSON.stringify([], null, 2));
+    console.log("Đã xóa tất cả đăng ký chỗ đỗ xe");
+  } catch (error) {
+    console.error("Lỗi khi reset database:", error);
+  }
+}
+
+// Gọi function khi kết nối MongoDB thành công
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("Connected to MongoDB");
+    // Uncomment dòng dưới để thực hiện reset
+    // resetToSingleAdmin();
+  })
+  .catch((err) => console.error("MongoDB connection error:", err));
+
 // Sử dụng các biến này trong code
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Function kiểm tra tài khoản admin
+async function checkAdminAccount() {
+  try {
+    const admin = await User.findOne({ username: "lily0770" });
+    console.log("Current admin account:", admin);
+
+    if (!admin) {
+      console.log("Admin account not found, creating new one...");
+      await resetToSingleAdmin();
+    }
+  } catch (error) {
+    console.error("Error checking admin account:", error);
+  }
+}
+
+// Gọi function khi kết nối MongoDB
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("Connected to MongoDB");
+    checkAdminAccount();
+  })
+  .catch((err) => console.error("MongoDB connection error:", err));

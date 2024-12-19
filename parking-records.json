@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "parkingId": "7",
+    "vehicleType": "Xe đạp / Xe đạp điện",
+    "licensePlate": "Nguyễn Ngọc Thiên Kim",
+    "studentClass": "10T1",
+    "username": "lily0770",
+    "registrationDate": "19/12/2024",
+    "expiryDate": "18/01/2025",
+    "status": "Active"
+  }
+]
